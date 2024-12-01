@@ -1,0 +1,15 @@
+node_modules/
+.next
+.next/
+out/
+.vscode/
+*.code-workspace
+
+# macOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
+build/
+# pnpm lock file
+pnpm-lock.yaml
