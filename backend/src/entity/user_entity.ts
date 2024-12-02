@@ -1,19 +1,11 @@
 import { IUser } from "../interfaces";
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  BaseEntity,
-  CreateDateColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
-} from "typeorm";
+import { Entity, Column, OneToMany } from "typeorm";
+import CommonFieldsEntity from "./common_fields_entity";
+import TaskEntity from "./task_entity";
+import ITask from "../interfaces/ITask";
 
 @Entity({ name: "users" })
-export default class UserEntity extends BaseEntity implements IUser {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export default class UserEntity extends CommonFieldsEntity implements IUser {
   @Column({ type: "varchar", length: 255 })
   name: string;
 
@@ -21,18 +13,14 @@ export default class UserEntity extends BaseEntity implements IUser {
   email: string;
 
   @Column({ type: "varchar", length: 255 })
-  profileImage: string;
+  profile_image: string;
 
   @Column({ type: "varchar", length: 255 })
-  githubId: string;
+  github_id: string;
 
-  // default columns
-  @CreateDateColumn()
-  created_at: Date;
+  @Column({ type: "integer", default: 0 })
+  tasks_count: number;
 
-  @UpdateDateColumn()
-  updated_at: Date;
-
-  @DeleteDateColumn()
-  deleted_at: Date;
+  @OneToMany(() => TaskEntity, (task) => task.user)
+  tasks: ITask[];
 }

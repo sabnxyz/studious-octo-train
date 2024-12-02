@@ -1,9 +1,9 @@
-import { initTRPC } from "@trpc/server";
 import { z } from "zod";
+import { taskRouter } from "../routers/task";
+import { publicProcedure, router } from "./init";
 
-const t = initTRPC.create();
+export const appRouter = router({
+  task: taskRouter,
+});
 
-export const router = t.router;
-
-export const appRouter = t.router({});
 export type AppRouter = typeof appRouter;

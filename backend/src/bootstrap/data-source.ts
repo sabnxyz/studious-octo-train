@@ -16,6 +16,7 @@ export const dataSourceOptions: DataSourceOptions = {
     idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
     connectionTimeoutMillis: 5000, // Return an error after 2 seconds if connection could not be established
   },
+  useUTC: true,
 };
 export const AppDataSource = new DataSource(dataSourceOptions);
 
@@ -23,6 +24,8 @@ const connectDatabase = async (retries = 5): Promise<DataSource | null> => {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await AppDataSource.initialize();
+
+      await response.query(`SET TIME ZONE 'UTC';`);
       console.log("Database connection established successfully.");
       return response;
     } catch (error: any) {

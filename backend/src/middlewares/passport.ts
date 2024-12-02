@@ -9,7 +9,7 @@ import { TypeormStore } from "connect-typeorm";
 export const Passport = (app: Express, datasource: DataSource) => {
   app.use(
     session({
-      secret: "SESSION_SECRET",
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -46,15 +46,15 @@ export const Passport = (app: Express, datasource: DataSource) => {
 
           let user = await userRepository.findOne({
             where: {
-              githubId: profile.id,
+              github_id: profile.id,
             },
           });
 
           if (!user) {
             user = await userRepository.save({
-              githubId: profile.id,
+              github_id: profile.id,
               name: profile.username,
-              profileImage: profile._json.avatar_url,
+              profile_image: profile._json.avatar_url,
               email: profile._json.email,
             });
           }
@@ -62,9 +62,9 @@ export const Passport = (app: Express, datasource: DataSource) => {
           return done(null, {
             id: user.id,
             name: profile.username,
-            profileImage: profile._json.avatar_url,
+            profile_image: profile._json.avatar_url,
             email: profile._json.email,
-            githubId: profile.id,
+            github_id: profile.id,
           });
         });
       }

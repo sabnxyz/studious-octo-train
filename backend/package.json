@@ -32,7 +32,7 @@
     "typescript-transform-paths": "^3.5.1"
   },
   "dependencies": {
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "11.0.0-rc.648",
     "axios": "^1.6.2",
     "body-parser": "^1.20.2",
     "connect-typeorm": "^2.0.0",
