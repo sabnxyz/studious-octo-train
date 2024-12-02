@@ -94,20 +94,3 @@ body {
   border-radius: 20px; /*  roundness of the scroll thumb  */
 }
 /* modifies scrollbar style site wide end */
-
-/* custom input field style start  */
-.c-input:has(.c-input__input:placeholder-shown) .c-input__placeholder {
-  top: 50%;
-}
-
-.c-input:has(.c-input__input:focus) .c-input__placeholder,
-.c-input .c-input__placeholder {
-  top: 32%;
-  font-size: 14px;
-}
-
-.c-input:has(.c-input__input:focus) {
-  border-color: transparent;
-  box-shadow: 0px 0px 0px 2px #0066ff80, 0px 0px 0px 4px #0066ff40;
-}
-/* custom input field style end */

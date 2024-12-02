@@ -1,6 +1,12 @@
 import { trpc } from "@/lib/utils/trpc";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { getFetch, httpBatchLink, loggerLink } from "@trpc/client";
+import {
+  getFetch,
+  httpBatchLink,
+  loggerLink,
+  splitLink,
+  unstable_httpSubscriptionLink,
+} from "@trpc/client";
 import { PropsWithChildren, useState } from "react";
 
 const queryClient = new QueryClient({
@@ -20,19 +26,41 @@ export const QueryProvider = ({ children }: PropsWithChildren) => {
         loggerLink({
           enabled: () => true,
         }),
-        httpBatchLink({
-          url,
-          fetch: async (input, init?) => {
-            const fetch = getFetch();
-            return fetch(input, {
-              ...init,
-              credentials: "include",
-            });
-          },
+        splitLink({
+          condition: (op) => op.type === "subscription",
+          true: unstable_httpSubscriptionLink({
+            url,
+            eventSourceOptions() {
+              return {
+                withCredentials: true,
+              };
+            },
+          }),
+          false: httpBatchLink({
+            url,
+            fetch: async (input, init?) => {
+              const fetch = getFetch();
+              return fetch(input, {
+                ...init,
+                credentials: "include",
+              });
+            },
+          }),
         }),
       ],
     })
   );
+
+  // httpBatchLink({
+  //   url,
+  //   fetch: async (input, init?) => {
+  //     const fetch = getFetch();
+  //     return fetch(input, {
+  //       ...init,
+  //       credentials: "include",
+  //     });
+  //   },
+  // }),
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

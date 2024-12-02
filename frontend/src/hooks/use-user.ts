@@ -4,10 +4,10 @@ import axios from "axios";
 export const useUser = () => {
   const data = useQuery<{
     email: string | null;
-    githubId: string;
+    github_id: string;
     id: string;
     name: string;
-    profileImage: string;
+    profile_image: string;
   }>({
     queryKey: ["/api/auth"],
     queryFn: async () => {

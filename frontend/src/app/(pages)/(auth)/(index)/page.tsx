@@ -1,12 +1,15 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Bolt, Ellipsis, Plus, Zap } from "lucide-react";
-import { format, formatDistance } from "date-fns";
-import { useDrag, useDrop } from "react-dnd";
-import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
+import {
+  CalendarIcon,
+  ChartNoAxesColumnIncreasing,
+  Ellipsis,
+  Ghost,
+  Zap,
+} from "lucide-react";
+import { formatDistance } from "date-fns";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,11 +19,9 @@ import {
   useSensors,
   DragEndEvent,
   useDroppable,
-  useDraggable,
   DragOverlay,
   DragOverEvent,
 } from "@dnd-kit/core";
-
 import {
   arrayMove,
   SortableContext,
@@ -31,82 +32,18 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { trpc } from "@/lib/utils/trpc";
 import { useUser } from "@/hooks/use-user";
-
-type ITaskStatus = "pending" | "ongoing" | "completed";
-
-interface ITask {
-  id: number;
-  name: string;
-  createdAt: Date;
-  priority: "low" | "medium" | "high";
-  due: Date;
-  status: ITaskStatus;
-}
+import { AddNewTaskDialog } from "./_components/AddNewTaskDialog";
+import ITask, {
+  ETaskStatus,
+} from "../../../../../../backend/src/interfaces/ITask";
+import { cn } from "@/lib/utils/cn";
 
 export default function Home() {
   const [activeId, setActiveId] = useState<ITask | null>(null);
-  const [tasks, setTasks] = useState<Record<ITaskStatus, ITask[]>>({
-    pending: [
-      {
-        id: 1,
-        name: "todo",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-      {
-        id: 2,
-        name: "todo 2",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 0.5),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-      {
-        id: 3,
-        name: "todo 3",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 0.5),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-      {
-        id: 4,
-        name: "todo 4",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 0.5),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-      {
-        id: 5,
-        name: "todo 5",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 0.5),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-    ],
+  const [tasks, setTasks] = useState<Record<ETaskStatus, ITask[]>>({
+    pending: [],
     ongoing: [],
-    completed: [
-      {
-        id: 3000,
-        name: "todo",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-      {
-        id: 3001,
-        name: "todo 2",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 0.5),
-        priority: "high",
-        due: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        status: "pending",
-      },
-    ],
+    completed: [],
   });
 
   const sensors = useSensors(
@@ -116,15 +53,26 @@ export default function Home() {
     })
   );
 
-  const getIndexOfTask = (id: number, status: ITaskStatus) => {
-    return tasks[status].findIndex((t) => t.id === id);
+  const {
+    data,
+    isLoading: isTasksLoading,
+    refetch,
+    trpc: gg,
+  } = trpc.task.getAll.useQuery();
+  const { mutateAsync: updateTask } = trpc.task.update.useMutation();
+
+  useEffect(() => {
+    if (data) {
+      setTasks(data);
+    }
+  }, [data]);
+
+  const getIndexOfTask = (id: string, status: ETaskStatus) => {
+    return tasks?.[status]?.findIndex((t) => t.id === id);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    console.count("handleDragEnd");
     const { active, over } = event;
-
-    console.log(active, over, "handleDragEnd");
 
     if (!over || !active.data.current || !over.data.current) return;
 
@@ -137,17 +85,16 @@ export default function Home() {
         over?.data.current?.sortable.containerId ||
       active.data.current?.sortable.containerId !== over?.id
     ) {
-      console.log("moved to different column,returning");
+      console.log("moved to different column");
       return;
     }
-    console.log("didnt return");
 
     const containerName = active.data.current?.sortable
-      .containerId as ITaskStatus;
+      .containerId as ETaskStatus;
 
     // console.log({ containerName });
-    const oldIndex = getIndexOfTask(Number(active.id), containerName);
-    const newIndex = getIndexOfTask(Number(over?.id), containerName);
+    const oldIndex = getIndexOfTask(String(active.id), containerName);
+    const newIndex = getIndexOfTask(String(over?.id), containerName);
 
     setTasks((prev) => {
       if (!over) return prev;
@@ -162,18 +109,15 @@ export default function Home() {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    console.count("handleDragOver");
     const { active, over } = event;
-
-    console.log(event, "handleDragOver");
 
     // check if item is being dragged into unknown area
     if (!over) return;
 
     const initialContainer = active.data.current?.sortable
-      .containerId as ITaskStatus;
+      .containerId as ETaskStatus;
     const targetContainer = over.data.current?.sortable
-      .containerId as ITaskStatus;
+      .containerId as ETaskStatus;
 
     if (!initialContainer) return;
 
@@ -181,36 +125,41 @@ export default function Home() {
       // const temp = { ...prev };
 
       if (!targetContainer) {
+        console.log("in not targetContainer");
         // when there is no target container the over id will be the container id it is being dragged into
-        console.log("No target container", targetContainer);
 
         // item is already in the list don't add it,
         if (
-          prev[over.id as keyof typeof prev].find(
-            (t) => t.id === Number(active.id)
-          )
+          prev[over.id as keyof typeof prev].find((t) => t.id === active.id)
         ) {
           return prev;
         }
 
         const draggedTask = prev[initialContainer].find(
-          (t) => t.id === Number(active.id)
+          (t) => t.id === active.id
         );
 
         prev[initialContainer] = prev[initialContainer].filter(
-          (t) => t.id !== Number(active.id)
+          (t) => t.id !== active.id
         );
 
         if (draggedTask) {
           prev[over.id as keyof typeof prev].push(draggedTask);
+          updateTask({
+            id: draggedTask.id,
+            status: over.id as ETaskStatus,
+          }).then((res) => {
+            refetch();
+            console.log(res, "Res 2");
+          });
         }
 
         return { ...prev };
       }
 
       if (initialContainer === targetContainer) {
-        const oldIndex = getIndexOfTask(Number(active.id), initialContainer);
-        const newIndex = getIndexOfTask(Number(over?.id), targetContainer);
+        const oldIndex = getIndexOfTask(String(active.id), initialContainer);
+        const newIndex = getIndexOfTask(String(over?.id), targetContainer);
 
         prev[initialContainer] = arrayMove(
           prev[initialContainer],
@@ -218,20 +167,28 @@ export default function Home() {
           newIndex
         );
       } else {
+        console.log("in else");
+
         const draggedTask = prev[initialContainer].find(
-          (t) => t.id === Number(active.id)
+          (t) => t.id === active.id
         );
 
         prev[initialContainer] = prev[initialContainer].filter(
-          (t) => t.id !== Number(active.id)
+          (t) => t.id !== active.id
         );
 
         const newIdx = prev[targetContainer].findIndex(
-          (t) => t.id === Number(over?.id)
+          (t) => t.id === over?.id
         );
 
         if (draggedTask) {
           prev[targetContainer].splice(newIdx, 0, draggedTask);
+          updateTask({
+            id: draggedTask.id,
+            status: targetContainer,
+          }).then((res) => {
+            console.log(res, "Res");
+          });
         }
       }
 
@@ -239,22 +196,26 @@ export default function Home() {
     });
   };
 
-  // const { data } = trpc.hello.useQuery({ name: "geta" });
-
-  // console.log(data, "Data");
-
-  // console.log("tasks", tasks);
-
   const { data: user } = useUser();
 
-  // console.log({ data });
+  trpc.task.onCreate.useSubscription(undefined, {
+    onData: (data: ITask) => {
+      console.log("Adding from subscription", data);
+      setTasks((prev) => {
+        return {
+          ...prev,
+          [data.status]: [...prev[data.status], data],
+        };
+      });
+    },
+  });
 
   return (
     <div className="min-h-dvh flex flex-col">
       <header className="h-20 p-4">
         <div className="flex items-start gap-2">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={user?.profileImage} />
+            <AvatarImage src={user?.profile_image} />
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
           <div>
@@ -269,10 +230,7 @@ export default function Home() {
       <div className="grid grid-cols-[repeat(20,_minmax(0,1fr))]">
         <aside className="p-4 pt-2 col-span-3">
           <div className="w-full">
-            <Button className="w-full">
-              <span>Add New Task</span>
-              <Plus />
-            </Button>
+            <AddNewTaskDialog />
           </div>
         </aside>
         <main className="h-[calc(100dvh_-_5rem)] pr-4 pb-4 col-[17_/_span_17] col-start-4">
@@ -282,29 +240,27 @@ export default function Home() {
             onDragStart={(e) => {
               const { active } = e;
 
-              console.log(active, "active");
+              // console.log(active, "active");
               if (!active.data.current) return;
 
               setActiveId(
-                tasks[
-                  active.data.current?.sortable.containerId as ITaskStatus
-                ].find((t) => t.id === Number(active.id)) || null
+                tasks?.[
+                  active.data.current?.sortable.containerId as ETaskStatus
+                ].find((t) => t.id === active.id) || null
               );
             }}
-            onDragEnd={(e) => {
-              console.log(e, "E");
-              handleDragEnd(e);
-            }}
+            onDragEnd={handleDragEnd}
             onDragOver={handleDragOver}
             autoScroll
           >
             <div className="rounded-2xl h-full grid-cols-3 gap-4 grid border border-gray-100 p-4">
-              {Object.values(tasks).map((task, i) => {
+              {["pending", "ongoing", "completed"].map((taskKey, i) => {
                 return (
                   <StatusColumn
                     key={i}
-                    status={Object.keys(tasks)[i] as ITaskStatus}
-                    data={task}
+                    status={taskKey}
+                    data={tasks?.[taskKey as keyof typeof tasks] || []}
+                    isLoading={isTasksLoading}
                   />
                 );
               })}
@@ -322,13 +278,17 @@ export default function Home() {
 const StatusColumn = ({
   status,
   data,
+  isLoading,
 }: {
-  status: ITaskStatus;
+  status: string;
   data: Array<ITask>;
+  isLoading: boolean;
 }) => {
   const { setNodeRef } = useDroppable({
     id: status,
   });
+  const isEmptyTaskList = data.length === 0 && !isLoading;
+
   return (
     <div className="bg-gray-100 rounded-xl h-full relative overflow-y-auto overflow-x-hidden">
       <div className="bg-gray-100 p-3 flex justify-between items-center sticky top-0 z-10">
@@ -342,7 +302,19 @@ const StatusColumn = ({
         items={data.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div ref={setNodeRef} className="p-2 flex flex-col gap-2">
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "p-2 flex flex-col gap-2",
+            isEmptyTaskList && "grid place-items-center h-[80%]"
+          )}
+        >
+          {isEmptyTaskList && (
+            <div className="flex flex-col justify-center items-center gap-3">
+              <Ghost className="size-12 text-gray-600" />
+              <p>No tasks here yet.</p>
+            </div>
+          )}
           {data.map((task) => {
             return <Card key={task.id} task={task} />;
           })}
@@ -356,7 +328,7 @@ const Card = ({
   task,
   fromOverlay,
 }: {
-  task: { id: number; name: string; createdAt: Date };
+  task: ITask;
   fromOverlay?: boolean;
 }) => {
   const {
@@ -387,14 +359,31 @@ const Card = ({
       className="p-2 bg-white rounded-xl"
     >
       <div className="flex justify-between items-center">
-        <p className="font-semibold text-gray-500"># {task.id}</p>
+        <p className="font-semibold text-gray-500"># {task.task_id}</p>
+
         <p className="text-gray-500 text-xs">
-          {formatDistance(task.createdAt, new Date(), {
+          {formatDistance(task.created_at, new Date(), {
             addSuffix: true,
           })}
         </p>
       </div>
-      {task.name}
+      <div>{task.name}</div>
+      <div className="mt-5 pt-3 flex gap-2 opacity-70 border-t border-gray-100">
+        <div className="bg-gray-100 p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2">
+          <ChartNoAxesColumnIncreasing className="size-4" />
+          <span>{task.priority}</span>
+        </div>
+        {task.due && (
+          <div className="bg-gray-100 p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2">
+            <CalendarIcon className="size-4 opacity-80" />
+            <span>
+              {formatDistance(task.due, new Date(), {
+                addSuffix: true,
+              })}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
