@@ -1,0 +1,45 @@
+# new push
+name: Boilerplate CI/CD
+
+on:
+  push:
+    branches: [depl]
+jobs:
+  deploy_to_droplet:
+    runs-on: self-hosted
+    env:
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.0.0
+
+      - name: Set up robots.txt for production
+        run: |
+          cp robots.staging.txt frontend/public/robots.txt
+
+      - name: Shutdown existing containers gracefully
+        run: echo $DOCKER_PASSWORD | sudo -S docker-compose down
+
+      - name: Setup backend environment variables
+        run: |
+          rm -rf backend/.env
+          echo "${{ secrets.BACKEND_PROD_ENV }}" > backend/.env
+      - name: Setup frontend environment variables
+        run: |
+          rm -rf frontend/.env.production
+          echo "${{ secrets.FRONTEND_PROD_ENV }}" > frontend/.env.production
+          
+      - name: Copy DB certificate
+        run: |
+          echo "${{ secrets.DB_CERT_PROD }}" > backend/src/bootstrap/certificate.crt
+
+      - name: Run Docker Compose
+        run: echo $DOCKER_PASSWORD | sudo -S docker-compose up --build -d

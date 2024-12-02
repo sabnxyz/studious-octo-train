@@ -1,0 +1,9 @@
+If you are contributing to this Boilerplate, just fork it and make your changes and create a PR
+
+
+For admin:
+To publish it to npm:
+1. npm login
+2. npm publish
+
+Make sure to change the version accordingly
