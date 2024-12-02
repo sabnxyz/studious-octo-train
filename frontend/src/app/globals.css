@@ -94,3 +94,43 @@ body {
   border-radius: 20px; /*  roundness of the scroll thumb  */
 }
 /* modifies scrollbar style site wide end */
+
+/* loader screen css start  */
+.loader {
+  animation: loaderGrow 3s ease-in-out 0s 1 forwards;
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease-in-out 1s 1 forwards;
+}
+
+@keyframes loaderGrow {
+  2% {
+    width: 5%;
+  }
+
+  50% {
+    width: 40%;
+  }
+
+  70% {
+    width: 90%;
+  }
+
+  100% {
+    width: 95%;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 100%;
+  }
+
+  to {
+    opacity: 0%;
+    z-index: -50;
+  }
+}
+
+/* loader screen css end  */

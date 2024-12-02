@@ -196,7 +196,7 @@ export default function Home() {
     });
   };
 
-  const { data: user } = useUser();
+  const { data: user, isLoading: isUserLoading } = useUser();
 
   trpc.task.onCreate.useSubscription(undefined, {
     onData: (data: ITask) => {

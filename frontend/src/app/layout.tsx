@@ -9,6 +9,11 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
 export const metadata: Metadata = {
   title: "Task Manager",
   description: "",
@@ -21,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.className} antialiased min-h-dvh`}>
+      <body className={`${geistMono.className} antialiased min-h-dvh`}>
         <AppWrapper>{children}</AppWrapper>
       </body>
     </html>
