@@ -122,3 +122,7 @@ API SERVER RUNNING ON PORT: 8000 and worker id at ...
 And the frontend should be accessible at http://localhost:3000
 
 You can now navigate to http://localhost:3000 and the application should be running and you can try it out there.
+
+---
+
+Also checkout the documentation [here]("./Documentation.md")
