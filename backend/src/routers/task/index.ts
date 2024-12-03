@@ -52,8 +52,10 @@ export const taskRouter = router({
         priority: input?.priority,
         status: input?.status,
         task_id: currentUser.tasks_count + 1,
+        index: currentUser.tasks_count + 1,
         due: input?.due,
         user: currentUser,
+        index_updated_at: new Date().toISOString(),
       });
 
       currentUser.tasks_count = currentUser.tasks_count + 1;
@@ -115,6 +117,7 @@ export const taskRouter = router({
           priority: z.nativeEnum(ETaskPriority).optional(),
           status: z.nativeEnum(ETaskStatus).optional(),
           due: z.string().optional(),
+          index: z.number().optional(),
         })
         .nullish()
     )
@@ -140,6 +143,14 @@ export const taskRouter = router({
       task.priority = input?.priority || task.priority;
       task.status = input?.status || task.status;
       task.due = input?.due || task.due;
+      task.index = typeof input?.index === "number" ? input?.index : task.index;
+
+      if (typeof input?.index === "number") {
+        console.log("inside");
+        task.index_updated_at = new Date().toISOString();
+      }
+
+      // console.log(task.index_updated_at, "index-");
 
       await task.save();
       ee.emit("update", task);

@@ -33,4 +33,10 @@ export default class TaskEntity extends CommonFieldsEntity implements ITask {
 
   @Column({ type: "text", nullable: true })
   description: string;
+
+  @Column({ type: "integer", nullable: true })
+  index: number;
+
+  @Column({ type: "timestamp", nullable: true })
+  index_updated_at: string;
 }

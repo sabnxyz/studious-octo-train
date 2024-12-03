@@ -7,6 +7,8 @@ import baseRouter from "./routes";
 import { appRouter } from "./trpc";
 import { createContext } from "./trpc/context";
 
+import "reflect-metadata";
+
 const getApp = async () => {
   const app = express();
   const datasource = await connectDatabase();

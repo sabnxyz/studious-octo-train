@@ -22,7 +22,9 @@ export const UserProfile = () => {
           <AvatarFallback>{user?.name.slice(0, 2)}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-semibold">{user?.name}</p>
+          <p className="font-semibold overflow-hidden text-ellipsis max-w-[14ch] whitespace-nowrap">
+            {user?.name}
+          </p>
           <div className="flex items-center gap-1 font-semibold border-yellow-400 border bg-yellow-400/60 text-yellow-900 text-xs py-0.5 px-1 rounded">
             <Hourglass size={12} />
             <p>Free Trial</p>
