@@ -21,4 +21,6 @@ export default interface ITask extends IBase {
   priority: ETaskPriority;
   due?: string;
   user: IUser;
+  index?: number;
+  index_updated_at?: string;
 }
