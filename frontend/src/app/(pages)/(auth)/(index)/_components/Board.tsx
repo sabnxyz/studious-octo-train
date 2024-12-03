@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   closestCenter,
@@ -189,6 +189,49 @@ export const Board = () => {
         return {
           ...prev,
           [data.status]: [...prev[data.status], data],
+        };
+      });
+    },
+  });
+
+  trpc.task.onUpdate.useSubscription(undefined, {
+    onData: (data: ITask) => {
+      // console.log("Adding from subscription", data);
+      setTasks((prev) => {
+        const oldTask = Object.values(prev)
+          .flat()
+          .find((t) => t.id === data.id);
+
+        if (oldTask && oldTask?.status !== data.status) {
+          return {
+            ...prev,
+            [oldTask?.status]: prev[oldTask?.status].filter(
+              (t) => t.id !== data.id
+            ),
+            [data.status]: [...prev[data.status], data],
+          };
+        }
+
+        return {
+          ...prev,
+          [data.status]: prev[data.status].map((t) => {
+            if (t.id === data.id) {
+              return data;
+            }
+            return t;
+          }),
+        };
+      });
+    },
+  });
+
+  trpc.task.onDelete.useSubscription(undefined, {
+    onData: (data: ITask) => {
+      console.log("onDelete", data);
+      setTasks((prev) => {
+        return {
+          ...prev,
+          [data.status]: prev[data.status].filter((t) => t.id !== data.id),
         };
       });
     },
