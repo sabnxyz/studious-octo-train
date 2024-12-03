@@ -20,6 +20,7 @@ import { trpc } from "@/lib/utils/trpc";
 import { useUser } from "@/hooks/use-user";
 import { TaskColumn } from "./TaskColumn";
 import { TaskCard } from "./TaskCard";
+import debounce from "lodash.debounce";
 
 export const Board = () => {
   const [activeId, setActiveId] = useState<ITask | null>(null);
@@ -36,11 +37,7 @@ export const Board = () => {
     })
   );
 
-  const {
-    data,
-    isLoading: isTasksLoading,
-    refetch,
-  } = trpc.task.getAll.useQuery();
+  const { data, isLoading: isTasksLoading } = trpc.task.getAll.useQuery();
   const { mutateAsync: updateTask } = trpc.task.update.useMutation();
 
   useEffect(() => {
@@ -56,36 +53,80 @@ export const Board = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    // console.log(active, over);
+    // console.log(active, over, "handleDragEnd");
 
-    if (!over || !active.data.current || !over.data.current) return;
+    if (!over || !active.data.current) return;
 
     // check if position is still the same
-    if (active.id === over?.id) return;
+    // if (active.id === over?.id) return;
 
     // check if its not the same column i.e. moved to different column
     if (
       active.data.current?.sortable.containerId !==
-        over?.data.current?.sortable.containerId ||
-      active.data.current?.sortable.containerId !== over?.id
+      over?.data.current?.sortable.containerId
+      //   &&
+      // active.data.current?.sortable.containerId !== over?.id
     ) {
-      console.log("moved to different column");
+      const newContainerName = over?.id as ETaskStatus;
+      const draggedTask = tasks[newContainerName].find(
+        (t) => t.id === active.id
+      );
+      const newIndex = getIndexOfTask(String(active?.id), newContainerName);
+
+      if (draggedTask) {
+        // console.log("calling update task 2");
+        updateTask({
+          id: draggedTask.id,
+          index: newIndex,
+          status: newContainerName,
+        }).then(() => {
+          // console.log("updated task");
+        });
+      }
+
+      // console.log("moved to different column");
       return;
     }
 
     const containerName = active.data.current?.sortable
       .containerId as ETaskStatus;
 
-    // console.log({ containerName });
+    console.log({ containerName });
     const oldIndex = getIndexOfTask(String(active.id), containerName);
     const newIndex = getIndexOfTask(String(over?.id), containerName);
+
+    const draggedTask = tasks[containerName].find((t) => t.id === active.id);
+
+    if (draggedTask) {
+      // console.log("calling update task");
+      updateTask({
+        id: draggedTask.id,
+        index: newIndex,
+        status: containerName,
+      }).then(() => {
+        // console.log("updated task");
+      });
+    }
 
     setTasks((prev) => {
       if (!over) return prev;
 
       return {
         ...prev,
-        [containerName]: arrayMove(prev[containerName], oldIndex, newIndex),
+        [containerName]: arrayMove(prev[containerName], oldIndex, newIndex).map(
+          (t) => {
+            if (t.id === active.id) {
+              return {
+                ...t,
+                // update the state of index for the item to the newIndex as our state on client needs to sync immediately to where it was dropped on the column
+                // the column applies sorting which reorders the card as soon as it is dropped
+                index: newIndex,
+                index_updated_at: new Date().toISOString(),
+              };
+            }
+            return t;
+          }
+        ),
       };
     });
 
@@ -109,7 +150,7 @@ export const Board = () => {
       // const temp = { ...prev };
 
       if (!targetContainer) {
-        console.log("in not targetContainer");
+        // console.log("in not targetContainer");
         // when there is no target container the over id will be the container id it is being dragged into
 
         // item is already in the list don't add it,
@@ -129,13 +170,12 @@ export const Board = () => {
 
         if (draggedTask) {
           prev[over.id as keyof typeof prev].push(draggedTask);
-          updateTask({
-            id: draggedTask.id,
-            status: over.id as ETaskStatus,
-          }).then((res) => {
-            refetch();
-            console.log(res, "Res 2");
-          });
+          // updateTask({
+          //   id: draggedTask.id,
+          //   status: over.id as ETaskStatus,
+          // }).then(() => {
+          //   // console.log("updated task");
+          // });
         }
 
         return { ...prev };
@@ -145,13 +185,35 @@ export const Board = () => {
         const oldIndex = getIndexOfTask(String(active.id), initialContainer);
         const newIndex = getIndexOfTask(String(over?.id), targetContainer);
 
+        const draggedTask = prev[initialContainer].find(
+          (t) => t.id === active.id
+        );
+
         prev[initialContainer] = arrayMove(
           prev[initialContainer],
           oldIndex,
           newIndex
-        );
+        ).map((t) => {
+          if (t.id === active.id) {
+            return {
+              ...t,
+              index: newIndex,
+              index_updated_at: new Date().toISOString(),
+            };
+          }
+          return t;
+        });
+
+        if (draggedTask) {
+          // updateTask({
+          //   id: draggedTask.id,
+          //   index: newIndex,
+          // }).then(() => {
+          //   // console.log("updated task");
+          // });
+        }
       } else {
-        console.log("in else");
+        // console.log("in else");
 
         const draggedTask = prev[initialContainer].find(
           (t) => t.id === active.id
@@ -166,13 +228,18 @@ export const Board = () => {
         );
 
         if (draggedTask) {
-          prev[targetContainer].splice(newIdx, 0, draggedTask);
-          updateTask({
-            id: draggedTask.id,
-            status: targetContainer,
-          }).then((res) => {
-            console.log(res, "Res");
+          prev[targetContainer].splice(newIdx, 0, {
+            ...draggedTask,
+            index: newIdx,
+            index_updated_at: new Date().toISOString(),
           });
+          // updateTask({
+          //   id: draggedTask.id,
+          //   status: targetContainer,
+          //   index: newIdx,
+          // }).then(() => {
+          //   // console.log("updated task");
+          // });
         }
       }
 
@@ -180,8 +247,7 @@ export const Board = () => {
     });
   };
 
-  const { data: user, isLoading: isUserLoading } = useUser();
-
+  // console.log(tasks, "tasks");
   trpc.task.onCreate.useSubscription(undefined, {
     onData: (data: ITask) => {
       // console.log("Adding from subscription", data);

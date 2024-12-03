@@ -107,7 +107,7 @@ export const TaskCard = ({
               size="sm"
               onPointerDown={(ev) => {
                 // console.log("clicked");
-                // ev.stopPropagation();
+                ev.stopPropagation();
                 setIsOpen("view");
               }}
             >

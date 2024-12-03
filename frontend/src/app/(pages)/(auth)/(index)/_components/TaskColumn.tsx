@@ -53,7 +53,7 @@ export const TaskColumn = ({
   isLoading: boolean;
   index: number;
 }) => {
-  const [sortBy, setSortBy] = useState("task_id");
+  const [sortBy, setSortBy] = useState("custom");
   const [sortOrder, setSortOrder] = useState("asc");
 
   const [selectedPriorities, setSelectedPriorities] = useState([] as string[]);
@@ -98,9 +98,29 @@ export const TaskColumn = ({
           new Date(firstItem.created_at).getTime() -
           new Date(secondItem.created_at).getTime()
         );
+      } else if (sortBy === "task_id") {
+        return Number(firstItem.task_id) - Number(secondItem.task_id);
+      } else if (sortBy === "custom") {
+        const firstIndex =
+          firstItem.index !== null ? Number(firstItem.index) : Infinity;
+        const secondIndex =
+          secondItem.index !== null ? Number(secondItem.index) : Infinity;
+
+        if (firstIndex !== secondIndex) {
+          return firstIndex - secondIndex;
+        } else {
+          // If index values are the same, compare index_updated_at dates
+          const firstUpdatedAt = new Date(
+            firstItem.index_updated_at!
+          ).getTime();
+          const secondUpdatedAt = new Date(
+            secondItem.index_updated_at!
+          ).getTime();
+          return secondUpdatedAt - firstUpdatedAt; // Latest date comes first
+        }
       }
 
-      return Number(firstItem.task_id) - Number(secondItem.task_id);
+      return undefined as unknown as number;
     })
     .filter((task) => {
       const priorityCondition =
@@ -169,6 +189,11 @@ export const TaskColumn = ({
               <span>Clear filters</span>
               <Plus className="rotate-45" />
             </Button>
+          )}
+          {sortBy && (
+            <span className="text-xs font-medium text-gray-400">
+              Sorted by:{sortBy}
+            </span>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -308,18 +333,23 @@ export const TaskColumn = ({
                   <SelectValue placeholder="Sort By" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="custom">Custom</SelectItem>
                   <SelectItem value="task_id">Task ID</SelectItem>
                   <SelectItem value="created_at">Created Date</SelectItem>
                   <SelectItem value="due">Due Date</SelectItem>
                 </SelectContent>
               </Select>
-              <DropdownMenuRadioGroup
-                value={sortOrder}
-                onValueChange={setSortOrder}
-              >
-                <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
+              {sortBy !== "custom" && (
+                <DropdownMenuRadioGroup
+                  value={sortOrder}
+                  onValueChange={setSortOrder}
+                >
+                  <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="desc">
+                    Desc
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
