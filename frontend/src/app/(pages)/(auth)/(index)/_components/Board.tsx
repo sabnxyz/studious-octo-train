@@ -264,19 +264,25 @@ export const Board = () => {
     onData: (data: ITask) => {
       console.log("onUpdate", data);
       setTasks((prev) => {
-        // const oldTask = Object.values(prev)
-        //   .flat()
-        //   .find((t) => t.id === data.id);
+        const oldTask = Object.values(prev)
+          .flat()
+          .find((t) => t.id === data.id);
 
-        // if (oldTask && oldTask?.status !== data.status) {
-        //   return {
-        //     ...prev,
-        //     [oldTask?.status]: prev[oldTask?.status].filter(
-        //       (t) => t.id !== data.id
-        //     ),
-        //     [data.status]: [...prev[data.status], data],
-        //   };
-        // }
+        const isTaskAlreadyPresentInNewStatus = prev[data.status].find(
+          (t) => t.id === data.id
+        );
+
+        if (oldTask && oldTask?.status !== data.status) {
+          return {
+            ...prev,
+            [oldTask?.status]: prev[oldTask?.status].filter(
+              (t) => t.id !== data.id
+            ),
+            [data.status]: isTaskAlreadyPresentInNewStatus
+              ? prev[data.status]
+              : [...prev[data.status], data],
+          };
+        }
 
         return {
           ...prev,
