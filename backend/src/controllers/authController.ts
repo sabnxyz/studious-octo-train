@@ -37,5 +37,11 @@ export const AuthController = (datasource: DataSource) => {
     }
   );
 
+  router.get("/logout", (req, res) => {
+    req.logout(function (err) {
+      res.redirect(`${process.env.FRONTEND_URL}/login`);
+    });
+  });
+
   return router;
 };

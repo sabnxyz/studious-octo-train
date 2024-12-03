@@ -92,6 +92,19 @@ export const taskRouter = router({
       throw e;
     }
   }),
+  onUpdate: authedProcedure.subscription(() => {
+    return observable<ITask>((emit) => {
+      const onUpdate = (data: ITask) => {
+        emit.next(data);
+      };
+
+      ee.on("update", onUpdate);
+
+      return () => {
+        ee.off("update", onUpdate);
+      };
+    });
+  }),
   update: authedProcedure
     .input(
       z
@@ -106,7 +119,6 @@ export const taskRouter = router({
         .nullish()
     )
     .mutation(async ({ input, ctx }) => {
-      console.log("inside update", "1");
       const ds = AppDataSource;
       const taskEntity = ds.getRepository(TaskEntity);
 
@@ -130,9 +142,25 @@ export const taskRouter = router({
       task.due = input?.due || task.due;
 
       await task.save();
+      ee.emit("update", task);
 
-      return task;
+      return {
+        message: "Successfully updated task",
+      };
     }),
+  onDelete: authedProcedure.subscription(() => {
+    return observable<ITask>((emit) => {
+      const onDelete = (data: ITask) => {
+        emit.next(data);
+      };
+
+      ee.on("delete", onDelete);
+
+      return () => {
+        ee.off("delete", onDelete);
+      };
+    });
+  }),
   delete: authedProcedure
     .input(
       z
@@ -160,6 +188,12 @@ export const taskRouter = router({
 
       await taskEntity.remove(task);
 
-      return task;
+      console.log(task, "task");
+
+      ee.emit("delete", { ...task, id: input.id });
+
+      return {
+        message: "Successfully deleted task",
+      };
     }),
 });

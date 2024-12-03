@@ -26,7 +26,7 @@ export default function LoginPage() {
         <div className="bg-gradient-to-b from-blue-300 shadow-lg to-white/10 p-6 rounded-3xl backdrop-blur">
           <div className="grid place-items-center">
             <div className="h-16 w-16 rounded-2xl shadow-lg grid place-items-center bg-white">
-              <LogIn className="size-10 text-black" />
+              <LogIn className="size-10 text-gray-600" />
             </div>
           </div>
           <p
