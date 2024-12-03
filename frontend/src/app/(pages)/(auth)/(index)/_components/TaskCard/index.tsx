@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash } from "lucide-react";
+import { Expand, Trash } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -67,11 +67,7 @@ export const TaskCard = ({
     <>
       <EditTaskDialog isOpen={isOpen} setIsOpen={setIsOpen} task={task} />
       <ViewTaskDialog isOpen={isOpen} setIsOpen={setIsOpen} task={task} />
-      <div
-        onMouseDown={() => {
-          setIsOpen("view");
-        }}
-      >
+      <div>
         <div
           ref={setNodeRef}
           style={style}
@@ -100,11 +96,23 @@ export const TaskCard = ({
               {task.description}
             </div>
           </div>
-          <div className="mt-5 pt-3 flex gap-2 opacity-70 border-t border-gray-100">
-            <TaskPriority priority={task.priority} />
-            {task.due && (
-              <TaskDue due={task.due} dueDaysRemaining={dueDaysRemaining} />
-            )}
+          <div className="mt-5 pt-3 justify-between flex gap-2 border-t border-gray-100">
+            <div className="flex gap-2 opacity-70">
+              <TaskPriority priority={task.priority} />
+              {task.due && (
+                <TaskDue due={task.due} dueDaysRemaining={dueDaysRemaining} />
+              )}
+            </div>
+            <Button
+              size="sm"
+              onPointerDown={(ev) => {
+                // console.log("clicked");
+                // ev.stopPropagation();
+                setIsOpen("view");
+              }}
+            >
+              View
+            </Button>
           </div>
         </div>
       </div>
