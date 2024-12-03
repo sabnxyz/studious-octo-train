@@ -6,9 +6,14 @@ import {
   ChartNoAxesColumnIncreasing,
   Ellipsis,
   Ghost,
+  LogOut,
+  Mail,
+  MessageSquare,
+  PlusCircle,
+  UserPlus,
   Zap,
 } from "lucide-react";
-import { formatDistance } from "date-fns";
+import { differenceInDays, formatDistance } from "date-fns";
 import { useEffect, useState } from "react";
 import {
   DndContext,
@@ -37,6 +42,25 @@ import ITask, {
   ETaskStatus,
 } from "../../../../../../backend/src/interfaces/ITask";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Home() {
   const [activeId, setActiveId] = useState<ITask | null>(null);
@@ -57,7 +81,6 @@ export default function Home() {
     data,
     isLoading: isTasksLoading,
     refetch,
-    trpc: gg,
   } = trpc.task.getAll.useQuery();
   const { mutateAsync: updateTask } = trpc.task.update.useMutation();
 
@@ -213,24 +236,63 @@ export default function Home() {
   return (
     <div className="min-h-dvh flex flex-col">
       <header className="h-20 p-4">
-        <div className="flex items-start gap-2">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={user?.profile_image} />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold">{user?.name}</p>
-            <div className="flex items-center gap-1 font-semibold border-yellow-400 border bg-yellow-400/60 text-yellow-900 text-xs py-0.5 px-1 rounded">
-              <Zap size={12}></Zap>
-              <p>Pro Account</p>
-            </div>
-          </div>
-        </div>
+        <p className="text-xl font-semibold">Task Manager DND 👻</p>
+        <p className="flex gap-1 text-gray-600">
+          A task manager app created with
+          <code className="px-2 py-0.5 text-sm bg-gray-100 border border-gray-200 rounded-md">
+            @dnd-kit
+          </code>
+          &
+          <code className="px-2 py-0.5 text-sm bg-gray-100 border border-gray-200 rounded-md">
+            trpc
+          </code>
+        </p>
       </header>
       <div className="grid grid-cols-[repeat(20,_minmax(0,1fr))]">
-        <aside className="p-4 pt-2 col-span-3">
+        <aside className="p-4 pt-2 col-span-3 flex flex-col justify-between">
           <div className="w-full">
-            <AddNewTaskDialog />
+            <div>
+              <p className="font-semibold text-sm text-gray-500">
+                Your Workspace
+              </p>
+            </div>
+            <div className="mt-2">
+              <AddNewTaskDialog />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 justify-between p-2 py-3 rounded-xl border border-gray-100">
+            <div className="flex items-start gap-2 justify-start">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={user?.profile_image} />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">{user?.name}</p>
+                <div className="flex items-center gap-1 font-semibold border-yellow-400 border bg-yellow-400/60 text-yellow-900 text-xs py-0.5 px-1 rounded">
+                  <Zap size={12}></Zap>
+                  <p>Pro Account</p>
+                </div>
+              </div>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() => {
+                      window.open(
+                        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`,
+                        "_self"
+                      );
+                    }}
+                  >
+                    <LogOut size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Logout</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </aside>
         <main className="h-[calc(100dvh_-_5rem)] pr-4 pb-4 col-[17_/_span_17] col-start-4">
@@ -293,9 +355,42 @@ const StatusColumn = ({
     <div className="bg-gray-100 rounded-xl h-full relative overflow-y-auto overflow-x-hidden">
       <div className="bg-gray-100 p-3 flex justify-between items-center sticky top-0 z-10">
         <p className="text-gray-700 font-semibold capitalize">{status}</p>
-        <button>
-          <Ellipsis />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button>
+              <Ellipsis className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="capitalize">
+              {status} Tasks
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <ChartNoAxesColumnIncreasing className="size-4" />
+                <span>Priority</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem>
+                    <span>High</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <span>Medium</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <span>Low</span>
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuItem>
+              <CalendarIcon />
+              Due date
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <SortableContext
         id={status}
@@ -342,6 +437,12 @@ const Card = ({
     id: task.id,
   });
 
+  const dueDaysRemaining = task.due
+    ? differenceInDays(task.due, new Date())
+    : -1;
+
+  console.log(task.name, task.due, dueDaysRemaining);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -359,22 +460,39 @@ const Card = ({
       className="p-2 bg-white rounded-xl"
     >
       <div className="flex justify-between items-center">
-        <p className="font-semibold text-gray-500"># {task.task_id}</p>
-
+        <p className="font-semibold text-gray-500">#{task.task_id}</p>
         <p className="text-gray-500 text-xs">
           {formatDistance(task.created_at, new Date(), {
             addSuffix: true,
           })}
         </p>
       </div>
-      <div>{task.name}</div>
+      <div className="mt-2">
+        <div className="line-clamp-2">{task.name}</div>
+        <div className="text-gray-500 text-sm mt-1">{task.description}</div>
+      </div>
       <div className="mt-5 pt-3 flex gap-2 opacity-70 border-t border-gray-100">
-        <div className="bg-gray-100 p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2">
+        <div
+          className={cn(
+            "bg-gray-100 p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2",
+            task.priority === "high" && "bg-red-100 text-red-700",
+            task.priority === "medium" && "bg-yellow-100 text-yellow-700",
+            task.priority === "low" && "bg-green-100 text-green-700"
+          )}
+        >
           <ChartNoAxesColumnIncreasing className="size-4" />
           <span>{task.priority}</span>
         </div>
         {task.due && (
-          <div className="bg-gray-100 p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2">
+          <div
+            className={cn(
+              "p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2 text-violet-700 bg-violet-100",
+              dueDaysRemaining <= 15 && "text-amber-700 bg-amber-100",
+              dueDaysRemaining <= 7 && "text-fuchsia-700 bg-fuchsia-100",
+              dueDaysRemaining <= 1 && "text-red-700 bg-red-100",
+              dueDaysRemaining < 0 && "bg-gray-100"
+            )}
+          >
             <CalendarIcon className="size-4 opacity-80" />
             <span>
               {formatDistance(task.due, new Date(), {

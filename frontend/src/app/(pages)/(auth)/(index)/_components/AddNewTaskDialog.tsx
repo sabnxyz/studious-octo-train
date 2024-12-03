@@ -272,7 +272,7 @@ export const AddNewTaskDialog = () => {
                   disabled={form.formState.isSubmitting}
                   className="disabled:opacity-70"
                 >
-                  {form.formState.isSubmitting ? "Submitting..." : "Submit"}
+                  {form.formState.isSubmitting ? "Adding..." : "Add new task"}
                 </Button>
               </DialogFooter>
             </form>
