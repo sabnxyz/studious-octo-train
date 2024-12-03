@@ -2,19 +2,30 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  CalendarClock,
   CalendarIcon,
+  CalendarPlus,
   ChartNoAxesColumnIncreasing,
   Ellipsis,
+  Filter,
   Ghost,
   LogOut,
   Mail,
   MessageSquare,
+  Plus,
   PlusCircle,
   UserPlus,
   Zap,
 } from "lucide-react";
-import { differenceInDays, formatDistance } from "date-fns";
-import { useEffect, useState } from "react";
+import {
+  differenceInDays,
+  format,
+  formatDistance,
+  isWithinInterval,
+  parseISO,
+  startOfDay,
+} from "date-fns";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -51,16 +62,28 @@ import {
 } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Home() {
   const [activeId, setActiveId] = useState<ITask | null>(null);
@@ -346,51 +369,275 @@ const StatusColumn = ({
   data: Array<ITask>;
   isLoading: boolean;
 }) => {
+  const [sortBy, setSortBy] = useState("task_id");
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const [selectedPriorities, setSelectedPriorities] = useState([] as string[]);
+  const [dueDateRange, setDueDateRange] = useState<DateRange | undefined>(
+    undefined
+  );
+  const [createdDateRange, setCreatedDateRange] = useState<
+    DateRange | undefined
+  >(undefined);
+
   const { setNodeRef } = useDroppable({
     id: status,
   });
-  const isEmptyTaskList = data.length === 0 && !isLoading;
+
+  const handlePrioritiesChange = (checked: boolean, priority: string) => {
+    if (checked) {
+      setSelectedPriorities([...selectedPriorities, priority]);
+    } else {
+      setSelectedPriorities(selectedPriorities.filter((p) => p !== priority));
+    }
+  };
+
+  const filteredData = data
+    .sort((a, b) => {
+      const firstItem = sortOrder === "asc" ? a : b;
+      const secondItem = sortOrder === "asc" ? b : a;
+
+      if (sortBy === "due") {
+        const defaultDate = new Date(0);
+
+        const firstDueDate = firstItem.due
+          ? new Date(firstItem.due)
+          : defaultDate;
+        const secondDueDate = secondItem.due
+          ? new Date(secondItem.due)
+          : defaultDate;
+
+        return firstDueDate.getTime() - secondDueDate.getTime();
+      } else if (sortBy === "created_at") {
+        return (
+          new Date(firstItem.created_at).getTime() -
+          new Date(secondItem.created_at).getTime()
+        );
+      }
+
+      return Number(firstItem.task_id) - Number(secondItem.task_id);
+    })
+    .filter((task) => {
+      const priorityCondition =
+        selectedPriorities.length > 0
+          ? selectedPriorities.includes(task.priority)
+          : true;
+
+      const dueDateCondition = dueDateRange
+        ? !task.due
+          ? false
+          : dueDateRange.to
+          ? isWithinInterval(startOfDay(parseISO(task.due)), {
+              start: startOfDay(
+                parseISO(dueDateRange.from?.toISOString() || "")
+              ),
+              end: startOfDay(parseISO(dueDateRange.to?.toISOString() || "")),
+            })
+          : startOfDay(parseISO(task.due)).getTime() ===
+            startOfDay(
+              parseISO(dueDateRange.from?.toISOString() || "")
+            ).getTime()
+        : true;
+
+      const createdDateCondition = createdDateRange
+        ? createdDateRange.to
+          ? isWithinInterval(startOfDay(parseISO(task.created_at)), {
+              start: startOfDay(
+                parseISO(createdDateRange.from?.toISOString() || "")
+              ),
+              end: startOfDay(
+                parseISO(createdDateRange.to?.toISOString() || "")
+              ),
+            })
+          : startOfDay(parseISO(task.created_at)).getTime() ===
+            startOfDay(
+              parseISO(createdDateRange.from?.toISOString() || "")
+            ).getTime()
+        : true;
+
+      return priorityCondition && dueDateCondition && createdDateCondition;
+    });
+
+  const isEmptyTaskList = filteredData.length === 0 && !isLoading;
+  const isFiltersApplied =
+    Boolean(dueDateRange) ||
+    Boolean(createdDateRange) ||
+    selectedPriorities.length > 0;
+
+  const resetFilters = () => {
+    setSelectedPriorities([]);
+    setDueDateRange(undefined);
+    setCreatedDateRange(undefined);
+  };
 
   return (
     <div className="bg-gray-100 rounded-xl h-full relative overflow-y-auto overflow-x-hidden">
       <div className="bg-gray-100 p-3 flex justify-between items-center sticky top-0 z-10">
         <p className="text-gray-700 font-semibold capitalize">{status}</p>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button>
-              <Ellipsis className="size-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="capitalize">
-              {status} Tasks
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <ChartNoAxesColumnIncreasing className="size-4" />
-                <span>Priority</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem>
-                    <span>High</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <span>Medium</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <span>Low</span>
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuItem>
-              <CalendarIcon />
-              Due date
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-4">
+          {isFiltersApplied && (
+            <Button
+              size="sm"
+              variant={"outline"}
+              onClick={() => resetFilters()}
+            >
+              <span>Clear filters</span>
+              <Plus className="rotate-45" />
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="outline-none">
+                <Filter className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="capitalize">
+                <span>Filter {status} Tasks</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ChartNoAxesColumnIncreasing className="size-4" />
+                  <span>Priority</span>
+                  {selectedPriorities.length > 0 && (
+                    <span className="text-xs mt-0.5 bg-purple-100 px-2 py-1 rounded capitalize">
+                      ({selectedPriorities.map((p) => p[0]).join(", ")})
+                    </span>
+                  )}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    {["high", "medium", "low"].map((priority) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={priority}
+                          checked={selectedPriorities.includes(priority)}
+                          onCheckedChange={(checked) => {
+                            handlePrioritiesChange(checked, priority);
+                          }}
+                          className="capitalize"
+                        >
+                          {priority}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="items-center">
+                  <CalendarClock className="size-4" />
+                  <span>Due date</span>
+                  {dueDateRange && (
+                    <span className="text-xs mt-0.5 bg-purple-100 px-2 py-1 rounded">
+                      (
+                      {[
+                        dueDateRange?.from &&
+                          format(dueDateRange.from, "dd/MM"),
+                        dueDateRange?.to && format(dueDateRange.to, "dd/MM"),
+                      ]
+                        .filter(Boolean)
+                        .join(" - ")}
+                      )
+                    </span>
+                  )}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <Calendar
+                      mode="range"
+                      selected={dueDateRange}
+                      onSelect={setDueDateRange}
+                      disabled={(date) =>
+                        date <
+                          new Date(
+                            new Date().setDate(new Date().getDate() - 1)
+                          ) || date < new Date("1900-01-01")
+                      }
+                    />
+                    {dueDateRange && (
+                      <div className="grid place-items-center">
+                        <Button
+                          variant="secondary"
+                          className="text-sm font-semibold w-[95%] mb-2"
+                          onClick={() => setDueDateRange(undefined)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="items-center">
+                  <CalendarPlus className="size-4" />
+                  <span>Created date</span>
+                  {createdDateRange && (
+                    <span className="text-xs mt-0.5 bg-purple-100 px-2 py-1 rounded">
+                      (
+                      {[
+                        createdDateRange?.from &&
+                          format(createdDateRange.from, "dd/MM"),
+                        createdDateRange?.to &&
+                          format(createdDateRange.to, "dd/MM"),
+                      ]
+                        .filter(Boolean)
+                        .join(" - ")}
+                      )
+                    </span>
+                  )}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <Calendar
+                      mode="range"
+                      selected={createdDateRange}
+                      onSelect={setCreatedDateRange}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                    />
+                    {createdDateRange && (
+                      <div className="grid place-items-center">
+                        <Button
+                          variant="secondary"
+                          className="text-sm font-semibold w-[95%] mb-2"
+                          onClick={() => setCreatedDateRange(undefined)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="capitalize">
+                <span>Sort by</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="border-0 p-0 px-2">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="task_id">Task ID</SelectItem>
+                  <SelectItem value="created_at">Created Date</SelectItem>
+                  <SelectItem value="due">Due Date</SelectItem>
+                </SelectContent>
+              </Select>
+              <DropdownMenuRadioGroup
+                value={sortOrder}
+                onValueChange={setSortOrder}
+              >
+                <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <SortableContext
         id={status}
@@ -408,9 +655,14 @@ const StatusColumn = ({
             <div className="flex flex-col justify-center items-center gap-3">
               <Ghost className="size-12 text-gray-600" />
               <p>No tasks here yet.</p>
+              {isFiltersApplied && (
+                <p className="text-sm -mt-2 text-gray-400">
+                  Note: Filters are applied
+                </p>
+              )}
             </div>
           )}
-          {data.map((task) => {
+          {filteredData.map((task) => {
             return <Card key={task.id} task={task} />;
           })}
         </div>
@@ -441,8 +693,6 @@ const Card = ({
     ? differenceInDays(task.due, new Date())
     : -1;
 
-  console.log(task.name, task.due, dueDaysRemaining);
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -461,11 +711,18 @@ const Card = ({
     >
       <div className="flex justify-between items-center">
         <p className="font-semibold text-gray-500">#{task.task_id}</p>
-        <p className="text-gray-500 text-xs">
-          {formatDistance(task.created_at, new Date(), {
-            addSuffix: true,
-          })}
-        </p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="text-gray-500 text-xs">
+                {formatDistance(task.created_at, new Date(), {
+                  addSuffix: true,
+                })}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{format(task.created_at, "PP")}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div className="mt-2">
         <div className="line-clamp-2">{task.name}</div>
@@ -484,22 +741,29 @@ const Card = ({
           <span>{task.priority}</span>
         </div>
         {task.due && (
-          <div
-            className={cn(
-              "p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2 text-violet-700 bg-violet-100",
-              dueDaysRemaining <= 15 && "text-amber-700 bg-amber-100",
-              dueDaysRemaining <= 7 && "text-fuchsia-700 bg-fuchsia-100",
-              dueDaysRemaining <= 1 && "text-red-700 bg-red-100",
-              dueDaysRemaining < 0 && "bg-gray-100"
-            )}
-          >
-            <CalendarIcon className="size-4 opacity-80" />
-            <span>
-              {formatDistance(task.due, new Date(), {
-                addSuffix: true,
-              })}
-            </span>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn(
+                    "p-1 flex gap-1 items-center rounded-md text-sm font-semibold px-2 text-violet-700 bg-violet-100",
+                    dueDaysRemaining <= 15 && "text-amber-700 bg-amber-100",
+                    dueDaysRemaining <= 7 && "text-fuchsia-700 bg-fuchsia-100",
+                    dueDaysRemaining <= 1 && "text-red-700 bg-red-100",
+                    dueDaysRemaining < 0 && "bg-gray-100"
+                  )}
+                >
+                  <CalendarIcon className="size-4 opacity-80" />
+                  <span>
+                    {formatDistance(task.due, new Date(), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{format(task.due, "PP")}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
     </div>

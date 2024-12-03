@@ -37,7 +37,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    {/* <ChevronRightIcon className="ml-auto" /> */}
+    <ChevronRightIcon className="ml-auto" />
   </DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName =
@@ -132,9 +132,9 @@ const DropdownMenuRadioItem = React.forwardRef<
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center border border-gray-200 rounded-full">
       <DropdownMenuPrimitive.ItemIndicator>
-        <DotFilledIcon className="h-2 w-2 fill-current" />
+        <span className="block h-1.5 bg-black w-1.5 rounded-full"></span>
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -151,7 +151,7 @@ const DropdownMenuLabel = React.forwardRef<
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
-      "px-2 py-1.5 text-sm font-semibold",
+      "px-2 py-1.5 text-sm font-semibold text-gray-500",
       inset && "pl-8",
       className
     )}
